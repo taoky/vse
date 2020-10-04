@@ -1,0 +1,4 @@
+-r requirements_common.txt
+paddlepaddle~=3.3
+paddleocr~=3.4.0
+imageio-ffmpeg~=0.6

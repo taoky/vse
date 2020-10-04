@@ -1,0 +1,4 @@
+# Install torch separately from AMD's official ROCm wheel repository. RapidOCR
+# is installed from the source snapshot committed in this repository.
+-r requirements_common.txt
+-e ./third_party/RapidOCR/python
