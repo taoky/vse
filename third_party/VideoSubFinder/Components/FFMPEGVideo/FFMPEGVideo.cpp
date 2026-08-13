@@ -400,8 +400,15 @@ int FFMPEGVideo::init_filters()
 		goto end;
 	}
 
+#if LIBAVUTIL_VERSION_MAJOR >= 61
+	// FFmpeg 9 removed av_opt_set_int_list().  pix_fmts is an array option in
+	// current FFmpeg, so pass the one supported output format directly.
+	ret = av_opt_set_array(buffersink_ctx, "pix_fmts", AV_OPT_SEARCH_CHILDREN,
+		0, 1, AV_OPT_TYPE_PIXEL_FMT, pix_fmts);
+#else
 	ret = av_opt_set_int_list(buffersink_ctx, "pix_fmts", pix_fmts,
 		AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
+#endif
 	if (ret < 0) {
 		av_log(NULL, AV_LOG_ERROR, "Cannot set output pixel format\n");
 		goto end;
