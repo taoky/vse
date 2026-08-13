@@ -14,8 +14,8 @@ from backend.tools.ocr import OcrRecogniser
 MODEL_CONFIG = SimpleNamespace(
     DET_MODEL_PATH=None,
     REC_MODEL_PATH=None,
-    DET_MODEL_NAME='PP-OCRv5_mobile_det',
-    REC_MODEL_NAME='PP-OCRv5_mobile_rec',
+    DET_MODEL_NAME='PP-OCRv6_small_det',
+    REC_MODEL_NAME='PP-OCRv6_small_rec',
 )
 
 

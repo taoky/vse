@@ -10,9 +10,10 @@ class PaddleModelConfig:
 
         # 模型文件目录
         self.MODEL_BASE = os.path.join(BASE_DIR, 'models')
-        # 模型版本 V5
-        self.MODEL_VERSION = 'V5'
-        # V5模型默认图形识别的shape为3, 48, 320
+        # PP-OCRv6 is used for its supported languages; Korean keeps the
+        # dedicated PP-OCRv5 recognizer.
+        self.MODEL_VERSION = 'V6'
+        # 默认图形识别的shape为3, 48, 320
         self.REC_IMAGE_SHAPE = '3,48,320'
         # 初始化模型路径
         self.REC_MODEL_PATH = None
@@ -50,7 +51,7 @@ class PaddleModelConfig:
         if self.REC_CHAR_TYPE in self.MULTI_LANG:
             resolved = self._resolve_models()
             if resolved:
-                self.MODEL_VERSION = 'V5'
+                self.MODEL_VERSION = 'V6' if self._supports_v6() else 'V5'
                 self.DET_MODEL_PATH, self.REC_MODEL_PATH, self.DET_MODEL_NAME, self.REC_MODEL_NAME = resolved
 
     def _get_v5_rec_model_name(self, lang):
@@ -82,6 +83,14 @@ class PaddleModelConfig:
             return 'te_PP-OCRv5_mobile_rec_infer'
         return None
 
+    def _supports_v6(self):
+        return self.REC_CHAR_TYPE in (
+            ['ch', 'chinese_cht', 'en', 'japan'] + self.LATIN_LANG
+        )
+
+    def _v6_model_type(self):
+        return 'small' if config.mode.value == 'fast' else 'medium'
+
     @staticmethod
     def _read_model_name_from_yaml(model_dir):
         """从 inference.yml 中读取 Global.model_name"""
@@ -109,8 +118,24 @@ class PaddleModelConfig:
 
     def _resolve_models(self):
         """
-        解析 V5 模型路径，返回 (det_model_path, rec_model_path, det_model_name, rec_model_name) 或 None
+        解析模型路径，返回 (det_model_path, rec_model_path, det_model_name, rec_model_name) 或 None
         """
+        if self._supports_v6():
+            model_type = self._v6_model_type()
+            v6_base = os.path.join(self.MODEL_BASE, 'V6')
+            det_model_name = f'PP-OCRv6_{model_type}_det'
+            rec_model_name = f'PP-OCRv6_{model_type}_rec'
+            det_model_path = os.path.join(v6_base, f'{det_model_name}_infer')
+            rec_model_path = os.path.join(v6_base, f'{rec_model_name}_infer')
+
+            # Source-only installations let PaddleOCR download official named
+            # models. A locally bundled pair is used only when both exist.
+            if os.path.exists(det_model_path) and os.path.exists(rec_model_path):
+                return (det_model_path, rec_model_path,
+                        self._read_model_name_from_yaml(det_model_path),
+                        self._read_model_name_from_yaml(rec_model_path))
+            return None, None, det_model_name, rec_model_name
+
         v5_base = os.path.join(self.MODEL_BASE, 'V5')
 
         # 快速模式优先使用 mobile 模型，否则使用 server 模型

@@ -24,6 +24,14 @@ LANGUAGE_MAP = {
 }
 
 
+def rapidocr_model_profile(language, accurate=False):
+    """Return (OCR version, model tier) without importing RapidOCR."""
+    lang = LANGUAGE_MAP.get(language, "ch")
+    if lang in {"ch", "chinese_cht", "en", "japan", "latin"}:
+        return "PP-OCRv6", "medium" if accurate else "small"
+    return ("PP-OCRv5" if lang == "ch" else "PP-OCRv4"), "mobile"
+
+
 def rapidocr_model_dir(default_dir):
     return Path(os.environ.get("VSE_RAPIDOCR_MODEL_DIR", default_dir)).resolve()
 
@@ -60,7 +68,8 @@ def torch_device_status():
 
 
 class RapidOcrTorch:
-    def __init__(self, language="ch", use_gpu=True, model_root_dir=None):
+    def __init__(self, language="ch", use_gpu=True, model_root_dir=None,
+                 accurate=False):
         _install_safe_model_loader()
         from rapidocr import RapidOCR
         from rapidocr.utils.typings import (
@@ -68,21 +77,23 @@ class RapidOcrTorch:
         )
 
         lang = LANGUAGE_MAP.get(language, "ch")
-        # PP-OCRv5 has first-party converted torch weights for Chinese. The
-        # multilingual recognizers currently use the PP-OCRv4 model family.
-        version = OCRVersion.PPOCRV5 if lang == "ch" else OCRVersion.PPOCRV4
+        version_name, model_type_name = rapidocr_model_profile(language, accurate)
+        # PP-OCRv6 unifies Chinese, English, Japanese and Latin scripts. Keep
+        # the existing specialized model family for unsupported languages.
+        version = OCRVersion(version_name)
+        model_type = ModelType(model_type_name)
         det_lang = LangDet.EN if lang == "en" else LangDet.CH
         params = {
             "Global.use_cls": False,
             "Global.text_score": 0.0,
             "Det.engine_type": EngineType.TORCH,
             "Det.ocr_version": version,
-            "Det.model_type": ModelType.MOBILE,
+            "Det.model_type": model_type,
             "Det.lang_type": det_lang,
             "Cls.engine_type": EngineType.TORCH,
             "Rec.engine_type": EngineType.TORCH,
             "Rec.ocr_version": version,
-            "Rec.model_type": ModelType.MOBILE,
+            "Rec.model_type": model_type,
             "Rec.lang_type": LangRec(lang),
             "EngineConfig.torch.use_cuda": bool(use_gpu),
         }

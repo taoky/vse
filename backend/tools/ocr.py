@@ -95,6 +95,7 @@ class OcrRecogniser:
             return RapidOcrTorch(
                 language=config.language.value,
                 use_gpu=self.hardware_accelerator.supports_torch_gpu(),
+                accurate=config.mode.value != 'fast',
                 model_root_dir=rapidocr_model_dir(
                     os.path.join(BASE_DIR, "models", "rapidocr")),
             )
@@ -112,7 +113,7 @@ class OcrRecogniser:
             device=device,
         )
         # PaddleX defaults to oneDNN on CPU. PaddlePaddle 3.3.x can fail on
-        # PP-OCRv5 PIR attributes there, while CUDA/ROCm must not receive this
+        # PP-OCR PIR attributes there, while CUDA/ROCm must not receive this
         # CPU-only option.
         if device == 'cpu':
             kwargs['enable_mkldnn'] = False

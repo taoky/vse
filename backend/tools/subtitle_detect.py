@@ -25,6 +25,7 @@ class SubtitleDetect:
             self.text_detector = RapidOcrTorch(
                 language=config.language.value,
                 use_gpu=hardware_accelerator.supports_torch_gpu(),
+                accurate=config.mode.value != 'fast',
                 model_root_dir=rapidocr_model_dir(
                     os.path.join(BASE_DIR, "models", "rapidocr")),
             )
